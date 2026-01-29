@@ -2,12 +2,10 @@ const db = require('../config/db');
 
 const checkusername = async (username) => {
     try {
-        // Validate username parameter
         if (!username) {
             throw new Error('Username is required');
         }
 
-        // Use parameterized query to prevent SQL injection
         const query = "SELECT * FROM users WHERE username = ?";
 
         return new Promise((resolve, reject) => {
@@ -37,5 +35,76 @@ const checkusername = async (username) => {
     }
 };
 
+const createUser = async (userData) => {
+    try {
+        const { name, email, username, password, role } = userData;
 
-module.exports = { checkusername };
+        // Validate required fields
+        if (!name || !email || !username || !password) {
+            throw new Error('All fields are required');
+        }
+
+        // Hash the password before saving
+        // const hashedPassword = await bcrypt.hash(password, 10);
+
+        const query = "INSERT INTO users (name, email, username, password, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
+        const values = [name, email, username, password, role];
+
+        return new Promise((resolve, reject) => {
+            db.query(query, values, (err, result) => {
+                if (err) {
+                    reject({
+                        success: false,
+                        message: 'Database error',
+                        error: err
+                    });
+                }
+
+                resolve({
+                    success: true,
+                    id: result.insertId,
+                    name,
+                    email,
+                    username,
+                    role
+                });
+            });
+        });
+
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message,
+            error: error
+        };
+    }
+};
+
+const getAllCustomers = async () => {
+    try {
+        const query = "SELECT * FROM users WHERE role = 'customer' AND status = 'A'";
+
+        return new Promise((resolve, reject) => {
+            db.query(query, (err, result) => {
+                if (err) {
+                    reject({
+                        success: false,
+                        message: 'Database error',
+                        error: err
+                    });
+                }
+
+                resolve(result);
+            });
+        });
+
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message,
+            error: error
+        };
+    }
+};
+
+module.exports = { checkusername, createUser, getAllCustomers };
