@@ -26,7 +26,7 @@ exports.login = async (req, res) => {
         const user = data.user;
 
         if (user.password !== password) {
-            return res.status(401).json({
+            return res.send({
                 success: false,
                 message: "Invalid password"
             });
@@ -114,14 +114,23 @@ exports.addCustomer = async (req, res) => {
 
 exports.getAllCustomer = async (req, res) => {
     try {
-        // Assuming you have a method to fetch all customers from the database
-        const customers = await model.getAllCustomers(); // You need to implement this method in your model
+        // query params
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+
+        const offset = (page - 1) * limit;
+
+        const result = await model.getAllCustomers(limit, offset);
 
         res.status(200).json({
             success: true,
-            count: customers.length,
-            data: customers
+            page,
+            limit,
+            totalRecords: result.total,
+            totalPages: Math.ceil(result.total / limit),
+            data: result.data
         });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({
@@ -135,18 +144,28 @@ exports.getAllCustomer = async (req, res) => {
 exports.editCustomer = async (req, res) => {
     try {
         const customerId = req.params.id;
-        const { name, email, username } = req.body;
+        const { name, email, username, password } = req.body;
 
         // Validate required fields
-        if (!name || !email || !username) {
+        if (!name || !email || !username || !password) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required"
             });
         }
 
-        // Here you would typically update the customer in the database
-        // For now, we'll just send a success response
+        let data = await model.checkusernameOnly(username, customerId);
+
+        if (data.exists) {
+            return res.send
+                ({
+                    success: false,
+                    message: "Username already exists"
+                });
+        }
+
+        await model.updateCustomer(req.body, customerId);
+
         res.status(200).json({
             success: true,
             message: "Customer updated successfully",
@@ -162,6 +181,43 @@ exports.editCustomer = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Server error",
+            error: err.message
+        });
+    }
+};
+
+exports.deleteCustomer = async (req, res) => {
+    try {
+        const customerId = req.params.id;
+
+        if (!customerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Customer ID is required"
+            });
+        }
+
+        const data = await model.deleteCustomer(customerId);
+
+        if (!data || data.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Customer not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Customer deleted successfully",
+            data: {
+                id: customerId
+            }
+        });
+    } catch (err) {
+        console.error('Error deleting customer:', err);
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete customer",
             error: err.message
         });
     }

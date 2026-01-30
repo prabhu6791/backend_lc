@@ -80,12 +80,53 @@ const createUser = async (userData) => {
     }
 };
 
-const getAllCustomers = async () => {
+const getAllCustomers = async (limit, offset) => {
     try {
-        const query = "SELECT * FROM users WHERE role = 'customer' AND status = 'A'";
+        const dataQuery = `
+            SELECT * FROM users 
+            WHERE role = 'customer' AND status = 'A'
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+        `;
+
+        const countQuery = `
+            SELECT COUNT(*) AS total 
+            FROM users 
+            WHERE role = 'customer' AND status = 'A'
+        `;
 
         return new Promise((resolve, reject) => {
-            db.query(query, (err, result) => {
+            db.query(countQuery, (err, countResult) => {
+                if (err) return reject(err);
+
+                const total = countResult[0].total;
+
+                db.query(dataQuery, [limit, offset], (err, dataResult) => {
+                    if (err) return reject(err);
+
+                    resolve({
+                        total,
+                        data: dataResult
+                    });
+                });
+            });
+        });
+
+    } catch (error) {
+        throw error;
+    }
+};
+
+const checkusernameOnly = async (username, id) => {
+    try {
+        if (!username || !id) {
+            throw new Error('Username and ID are required');
+        }
+
+        const query = "SELECT * FROM users WHERE username = ? AND id != ?";
+
+        return new Promise((resolve, reject) => {
+            db.query(query, [username, id], (err, result) => {
                 if (err) {
                     reject({
                         success: false,
@@ -94,7 +135,11 @@ const getAllCustomers = async () => {
                     });
                 }
 
-                resolve(result);
+                resolve({
+                    success: true,
+                    exists: result.length > 0,
+                    user: result[0]
+                });
             });
         });
 
@@ -107,4 +152,76 @@ const getAllCustomers = async () => {
     }
 };
 
-module.exports = { checkusername, createUser, getAllCustomers };
+const updateCustomer = async (userData, id) => {
+    try {
+        const { name, email, username } = userData;
+
+        // Validate required fields
+        if (!name || !email || !username) {
+            throw new Error('All fields are required');
+        }
+
+        const query = "UPDATE users SET name = ?, email = ?, username = ? WHERE id = ?";
+        const values = [name, email, username, id];
+
+        return new Promise((resolve, reject) => {
+            db.query(query, values, (err, result) => {
+                if (err) {
+                    reject({
+                        success: false,
+                        message: 'Database error',
+                        error: err
+                    });
+                }
+
+                resolve({
+                    success: true,
+                    message: 'Customer updated successfully'
+                });
+            });
+        });
+
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message,
+            error: error
+        };
+    }
+};
+
+const deleteCustomer = async (id) => {
+    try {
+        if (!id) {
+            throw new Error('ID is required');
+        }
+
+        const query = "UPDATE users SET status = 'D' WHERE id = ?";
+
+        return new Promise((resolve, reject) => {
+            db.query(query, [id], (err, result) => {
+                if (err) {
+                    reject({
+                        success: false,
+                        message: 'Database error',
+                        error: err
+                    });
+                }
+
+                resolve({
+                    success: true,
+                    message: 'Customer deleted successfully'
+                });
+            });
+        });
+
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message,
+            error: error
+        };
+    }
+};
+
+module.exports = { checkusername, createUser, getAllCustomers, checkusernameOnly, updateCustomer, deleteCustomer };

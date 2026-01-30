@@ -7,7 +7,9 @@ app.use(cors());
 app.use(express.json());
 
 const userRoutes = require('./app/routes/userRoutes');
+const productRoutes = require('./app/routes/product.routes');
 app.use('/api', userRoutes);
+app.use('/api', productRoutes);
 
 app.get('/', (req, res) => {
     res.send("API is running...");
