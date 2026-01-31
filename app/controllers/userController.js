@@ -75,7 +75,7 @@ exports.addCustomer = async (req, res) => {
         // Check if username already exists
         const existingUser = await model.checkusername(username);
         if (existingUser.exists) {
-            return res.status(400).json({
+            return res.send({
                 success: false,
                 message: "Username already exists"
             });
