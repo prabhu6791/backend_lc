@@ -1,5 +1,6 @@
 const model = require('../models/userModels');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 const JWT_SECRET = "123456";
 
@@ -25,7 +26,8 @@ exports.login = async (req, res) => {
 
         const user = data.user;
 
-        if (user.password !== password) {
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
             return res.send({
                 success: false,
                 message: "Invalid password"
@@ -62,10 +64,10 @@ exports.login = async (req, res) => {
 
 exports.addCustomer = async (req, res) => {
     try {
-        const { name, email, username, password } = req.body;
+        const { name, phone, email, username, password } = req.body;
 
         // Validate required fields
-        if (!name || !email || !username || !password) {
+        if (!name || !email || !username || !password || !phone) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required"
@@ -81,12 +83,17 @@ exports.addCustomer = async (req, res) => {
             });
         }
 
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
         // Create new customer
         const newCustomer = await model.createUser({
             name,
             email,
             username,
-            password,
+            phone,
+            password: hashedPassword,
             role: 'customer'
         });
 
@@ -222,3 +229,22 @@ exports.deleteCustomer = async (req, res) => {
         });
     }
 };
+
+
+exports.contact = async (req, res) => {
+    try {
+        const { name, email, message, phone, subject } = req.body;
+        const data = await model.saveContact(req.body);
+        res.status(200).json({
+            success: true,
+            message: "Contact page"
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: err.message
+        });
+    }
+}

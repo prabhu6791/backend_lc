@@ -4,6 +4,7 @@ const userController = require("../controllers/userController");
 const verifyToken = require("../middleware/authMiddleware");
 
 router.post("/login", userController.login);
+router.post("/contact", userController.contact);
 
 router.post("/customers", userController.addCustomer);
 router.get("/get-all-customers", verifyToken, userController.getAllCustomer);

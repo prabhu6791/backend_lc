@@ -37,45 +37,49 @@ const checkusername = async (username) => {
 
 const createUser = async (userData) => {
     try {
-        const { name, email, username, password, role } = userData;
+        const { name, email, username, password, role, phone } = userData;
 
         // Validate required fields
-        if (!name || !email || !username || !password) {
-            throw new Error('All fields are required');
+        if (!name || !email || !username || !password || !phone) {
+            throw new Error("All fields are required");
         }
 
-        // Hash the password before saving
-        // const hashedPassword = await bcrypt.hash(password, 10);
+        const query = `
+            INSERT INTO users 
+            (name, email, phone_number, username, password, role, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
+        `;
 
-        const query = "INSERT INTO users (name, email, username, password, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
-        const values = [name, email, username, password, role];
+        const values = [name, email, phone, username, password, role];
 
         return new Promise((resolve, reject) => {
             db.query(query, values, (err, result) => {
                 if (err) {
-                    reject({
+                    return reject({
                         success: false,
-                        message: 'Database error',
-                        error: err
+                        message: "Database error",
+                        error: err,
                     });
                 }
 
+                // result guaranteed here
                 resolve({
                     success: true,
                     id: result.insertId,
                     name,
                     email,
                     username,
-                    role
+                    role,
                 });
             });
         });
 
     } catch (error) {
+        console.error("Error in createUser:", error);
         return {
             success: false,
             message: error.message,
-            error: error
+            error,
         };
     }
 };
@@ -224,4 +228,49 @@ const deleteCustomer = async (id) => {
     }
 };
 
-module.exports = { checkusername, createUser, getAllCustomers, checkusernameOnly, updateCustomer, deleteCustomer };
+const saveContact = async (contactData) => {
+    try {
+        const { name, email, message, phone, subject } = contactData;
+
+        // Validate required fields
+        if (!name || !email || !message || !subject) {
+            throw new Error("All fields are required");
+        }
+
+        const query = `
+            INSERT INTO contacts
+            (name, email, phone, subject, message, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        `;
+
+        const values = [name, email, phone || null, subject, message];
+
+        return new Promise((resolve, reject) => {
+            db.query(query, values, (err, result) => {
+                if (err) {
+                    return reject({
+                        success: false,
+                        message: "Database error",
+                        error: err,
+                    });
+                }
+
+                // result guaranteed here
+                resolve({
+                    success: true,
+                    id: result.insertId,
+                });
+            });
+        });
+
+    } catch (error) {
+        console.error("Error in saveContact:", error);
+        return {
+            success: false,
+            message: error.message,
+            error,
+        };
+    }
+};
+
+module.exports = { checkusername, createUser, getAllCustomers, checkusernameOnly, updateCustomer, deleteCustomer, saveContact };
